@@ -310,7 +310,7 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
                         </button>
                       </td>
                     </tr>
-                )}})}
+                )})}
               </tbody>
             </table>
           </div>

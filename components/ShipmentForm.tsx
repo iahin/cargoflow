@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Parcel, ParcelCategory, Shipment, ShipmentStatus, OfficeLocation } from '../types';
 import { PRICING_RULES, VOLUMETRIC_DIVISOR, PROHIBITED_ITEMS } from '../constants';
@@ -45,14 +46,16 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
     let newTax = 0;
     const currentWarnings: string[] = [];
 
+    // Use a simpler dependency tracker string
+    const depString = parcels.map(p => `${p.category}-${p.actualWeight}-${p.length}-${p.width}-${p.height}-${p.quantity}`).join('|');
+
     const updatedParcels = parcels.map(parcel => {
       // 1. Calculate Volumetric
-      const volWeight = (parcel.length! * parcel.width! * parcel.height!) / VOLUMETRIC_DIVISOR || 0;
+      const volWeight = ((parcel.length || 0) * (parcel.width || 0) * (parcel.height || 0)) / VOLUMETRIC_DIVISOR || 0;
       
       // 2. Determine Chargeable
-      // Logic: For fixed items, weight might not matter for price, but matters for cargo space.
       const rule = PRICING_RULES[parcel.category as ParcelCategory] as PricingRule;
-      const chargeable = Math.max(parcel.actualWeight!, volWeight);
+      const chargeable = Math.max(parcel.actualWeight || 0, volWeight);
       
       let lineTotal = 0;
       let lineTax = 0;
@@ -68,7 +71,11 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
           if (rule.minWeight && chargeable < rule.minWeight) {
              // We don't change chargeable weight display, but price calculation uses min
              weightToCharge = rule.minWeight;
-             currentWarnings.push(`Parcel ${parcel.id}: Minimum weight of ${rule.minWeight}kg applied for pricing.`);
+             // Avoid duplicate warnings for same parcel
+             const warningMsg = `Parcel ${parcel.id}: Minimum weight of ${rule.minWeight}kg applied for pricing.`;
+             if (!currentWarnings.includes(warningMsg)) {
+                 currentWarnings.push(warningMsg);
+             }
           }
           lineTotal = weightToCharge * (rule.pricePerKg || 0);
         }
@@ -91,10 +98,6 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
       };
     });
 
-    // We don't setParcels here to avoid infinite loop, we just calculate totals
-    // In a real app, we'd use a reducer or careful dependency management.
-    // Here we will just calculate the totals for the footer summary.
-    
     setSubtotal(parseFloat(newSubtotal.toFixed(2)));
     setTaxTotal(parseFloat(newTax.toFixed(2)));
     setGrandTotal(parseFloat((newSubtotal + newTax).toFixed(2)));
@@ -133,8 +136,8 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
     }
 
     const fullParcels = parcels.map(p => {
-        const vol = (p.length! * p.width! * p.height!) / VOLUMETRIC_DIVISOR;
-        const chargeable = Math.max(p.actualWeight!, vol);
+        const vol = ((p.length || 0) * (p.width || 0) * (p.height || 0)) / VOLUMETRIC_DIVISOR;
+        const chargeable = Math.max(p.actualWeight || 0, vol);
         const rule = PRICING_RULES[p.category as ParcelCategory] as PricingRule;
         let price = 0;
         if(rule.isFixed) price = (rule.fixedPrice || 0) * (p.quantity || 1);
@@ -170,7 +173,7 @@ const ShipmentForm: React.FC<ShipmentFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden animate-fade-in">
       <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
         <h2 className="text-xl font-bold text-slate-800">New Shipment Order</h2>
         <div className="text-sm text-slate-500">

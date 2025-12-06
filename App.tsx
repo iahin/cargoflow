@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -40,10 +41,23 @@ const App: React.FC = () => {
     setCurrentView('dashboard');
   };
 
+  // Public View Wrapper - Must be checked before login check
+  if (currentView === 'public-tracking') {
+     return (
+       <div>
+         <button 
+           onClick={() => setCurrentView('dashboard')} 
+           className="fixed top-4 right-4 bg-white px-4 py-2 rounded-lg shadow text-sm font-medium text-slate-600 z-50 hover:bg-slate-50 border border-slate-200"
+         >
+           Back to Home
+         </button>
+         <TrackingView />
+       </div>
+     );
+  }
+
   // Simple Login Screen
   if (!isLoggedIn) {
-    // If checking public tracking URL (hash routing simulation), user might not need login.
-    // For MVP simplicity, we show a landing page that splits into Public Tracking OR Staff Login.
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
@@ -84,31 +98,19 @@ const App: React.FC = () => {
     );
   }
 
-  // Public View Wrapper
-  if (currentView === 'public-tracking') {
-     return (
-       <div>
-         <button 
-           onClick={() => setIsLoggedIn(false)} 
-           className="fixed top-4 right-4 bg-white px-4 py-2 rounded-lg shadow text-sm font-medium text-slate-600 z-50"
-         >
-           Back to Home
-         </button>
-         <TrackingView />
-       </div>
-     );
-  }
-
   // Authenticated App
   return (
     <Layout 
       userRole={userRole} 
       currentView={currentView} 
       onNavigate={setCurrentView}
-      onLogout={() => setIsLoggedIn(false)}
+      onLogout={() => {
+        setIsLoggedIn(false);
+        setCurrentView('dashboard');
+      }}
     >
       {loading ? (
-        <div className="flex items-center justify-center h-full text-slate-400">Loading data...</div>
+        <div className="flex items-center justify-center h-full text-slate-400 animate-pulse">Loading data...</div>
       ) : (
         <>
           {currentView === 'dashboard' && <Dashboard shipments={shipments} />}
@@ -119,37 +121,38 @@ const App: React.FC = () => {
             />
           )}
           {currentView === 'shipments' && (
-             <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
-               <div className="p-4 border-b border-slate-200 font-bold text-lg">All Shipments</div>
+             <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden animate-fade-in">
+               <div className="p-4 border-b border-slate-200 font-bold text-lg bg-slate-50">All Shipments</div>
                <table className="w-full text-left text-sm">
-                 <thead className="bg-slate-50 text-slate-500">
+                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                    <tr>
-                     <th className="p-4">Tracking #</th>
-                     <th className="p-4">Date</th>
-                     <th className="p-4">Sender</th>
-                     <th className="p-4">Status</th>
-                     <th className="p-4 text-right">Total</th>
+                     <th className="p-4 font-semibold">Tracking #</th>
+                     <th className="p-4 font-semibold">Date</th>
+                     <th className="p-4 font-semibold">Sender</th>
+                     <th className="p-4 font-semibold">Status</th>
+                     <th className="p-4 text-right font-semibold">Total</th>
                      <th className="p-4"></th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-100">
                    {shipments.map(s => (
-                     <tr key={s.id} className="hover:bg-slate-50">
-                       <td className="p-4 font-mono font-medium">{s.trackingNumber}</td>
+                     <tr key={s.id} className="hover:bg-blue-50/50 transition-colors">
+                       <td className="p-4 font-mono font-medium text-blue-600">{s.trackingNumber}</td>
                        <td className="p-4 text-slate-500">{new Date(s.dateCreated).toLocaleDateString()}</td>
-                       <td className="p-4">{s.sender.name}</td>
+                       <td className="p-4 font-medium text-slate-700">{s.sender.name}</td>
                        <td className="p-4">
-                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                         <span className={`px-2 py-1 rounded-full text-xs font-bold 
+                           ${s.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                            {s.status}
                          </span>
                        </td>
-                       <td className="p-4 text-right font-medium">${s.total}</td>
+                       <td className="p-4 text-right font-medium text-slate-900">${s.total}</td>
                        <td className="p-4 text-right">
                          <button 
                            onClick={() => setGeneratedInvoice(s)}
-                           className="text-blue-600 hover:underline"
+                           className="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wide border border-blue-200 px-3 py-1 rounded hover:bg-blue-50 transition-all"
                          >
-                           View Invoice
+                           Invoice
                          </button>
                        </td>
                      </tr>
@@ -160,10 +163,10 @@ const App: React.FC = () => {
           )}
           {currentView === 'tracking' && <TrackingView />}
           {currentView === 'settings' && (
-             <div className="p-8 text-center text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+             <div className="p-8 text-center text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed animate-fade-in">
                 <h2 className="text-xl font-bold mb-2">Pricing Configuration</h2>
                 <p>Admin feature to modify per-kg rates and fixed item prices.</p>
-                <div className="mt-4 p-4 bg-slate-50 inline-block text-left rounded text-sm">
+                <div className="mt-4 p-4 bg-slate-50 inline-block text-left rounded text-sm font-mono text-xs">
                    <pre>{JSON.stringify({ note: "Pricing logic is defined in constants.ts for MVP" }, null, 2)}</pre>
                 </div>
              </div>
